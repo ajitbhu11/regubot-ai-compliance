@@ -12,11 +12,11 @@ from compliance_engine import build_compliance_agent
 st.set_page_config(
     page_title="ReguBot AI Compliance Suite",
     page_icon="🛡️",
-    layout="wide"
-)
+    layout="wide")
 
 PREMIUM_CHECKOUT_URL = "https://stripe.com"
 STRIPE_CUSTOMER_PORTAL = "https://stripe.com"
+INDIVIDUAL_PASS_URL = "https://stripe.com"
 
 # =====================================================================
 # 2. CLERK USER REGISTRATION GATEWAY LOGIC
@@ -49,7 +49,13 @@ with st.sidebar:
     
     if not is_premium:
         st.warning("🔒 Running on the Free Preview Tier.")
-        st.markdown(f"[✨ Upgrade to Corporate Tier]({PREMIUM_CHECKOUT_URL})")
+        st.markdown(f"### **Institutional Pro Tier**")
+        st.markdown(f"**Price:** ₹25,000/month (Billed Annually)")
+        st.markdown(f"[✨ Upgrade Campus License Now]({PREMIUM_CHECKOUT_URL})")
+        st.markdown("---")
+        st.markdown(f"### **Individual Scholar Pass**")
+        st.markdown(f"**Price:** ₹499/month (Cancel Anytime)")
+        st.markdown(f"[✨ Buy Single User Pass]({INDIVIDUAL_PASS_URL})")
     else:
         st.success("👑 Corporate features unlocked successfully!")
         st.markdown(f"[⚙️ Manage Billing / Cancel Subscription]({STRIPE_CUSTOMER_PORTAL})")
@@ -61,17 +67,36 @@ with st.sidebar:
     user_gemini_key = st.text_input("Enter Your Google Gemini API Key:", type="password", placeholder="AIzaSy...")
     st.caption("🔗 [Get a free Gemini key from Google AI Studio](https://google.com)")
 
+    st.markdown("---")
+    st.subheader("⚡ Bounding Filters")
+    
+    if is_premium:
+        selected_years = st.slider("Select Publication Year Range:", min_value=2010, max_value=2026, value=(2022, 2026))
+        start_year, end_year = selected_years
+    else:
+        st.caption("📅 Publication Range Locked: Defaulting to 2020-2026 (Upgrade to unlock slider)")
+        start_year, end_year = 2020, 2026
+
+    st.markdown("---")
+    st.subheader("🗒️ Legal & Compliance")
+    
+    with st.expander("⚖️ Terms of Service"):
+        st.caption("Usage Profile: This application functions purely under a Bring-Your-Own-Key (BYOK) paradigm. All computing operations are funded by the API tokens managed directly under your personal or institutional Google account keys.")
+        
+    with st.expander("🔒 Privacy Policy"):
+        st.caption("Data Custody: Uploaded manuscripts are processed purely in-memory during active loops. We maintain zero local database persistence.")
+# Choose the active operations niche layout framework
 niche_selection = st.selectbox(
     "Select Target Compliance Evaluation Module:",
     ["Patent Checker", "Grant Auditor", "Bioethics Scout"]
 )
 
 if niche_selection == "Patent Checker":
-    st.info("🎯 **Module active:** Indian Patent (IPR) & Prior-Art Agent. Auditing criteria under the Indian Patents Act, 1970.")
+    st.info("🎯 Module active: Indian Patent (IPR) & Prior-Art Agent. Auditing criteria under the Indian Patents Act, 1970.")
 elif niche_selection == "Grant Auditor":
-    st.info("💰 **Module active:** SERB / DST Government Grant Alignment Auditor framework.")
+    st.info("💰 Module active: SERB / DST Government Grant Alignment Auditor framework.")
 else:
-    st.info("🔬 **Module active:** Bioethics & Clinical Trial Regulatory Scout synced against regional CTRI profiles.")
+    st.info("🔬 Module active: Bioethics & Clinical Trial Regulatory Scout synced against regional CTRI profiles.")
 
 uploaded_file = st.file_uploader(
     "📤 Drag and drop your research manuscript, grant proposal draft, or clinical methodology document:",
@@ -83,22 +108,20 @@ parsed_manuscript_text = ""
 
 if uploaded_file is not None:
     file_extension = uploaded_file.name.split(".")[-1].lower()
-    
     if file_extension == "pdf":
         try:
             pdf_reader = PdfReader(uploaded_file)
             extracted_pages = [page.extract_text() for page in pdf_reader.pages]
             parsed_manuscript_text = "\n".join(filter(None, extracted_pages))
-            st.success(f"📊 Successfully parsed PDF: {uploaded_file.name} ({len(pdf_reader.pages)} Pages loaded)")
+            st.success(f"📊 Successfully parsed PDF: {uploaded_file.name}")
         except Exception as e:
             st.error(f"Error parsing PDF file: {e}")
-            
     elif file_extension == "docx":
         try:
             doc = Document(uploaded_file)
             extracted_paras = [p.text for p in doc.paragraphs]
             parsed_manuscript_text = "\n".join(filter(None, extracted_paras))
-            st.success(f"📊 Successfully parsed Word Document: {uploaded_file.name} ({len(doc.paragraphs)} Paragraphs loaded)")
+            st.success(f"📊 Successfully parsed Word Document: {uploaded_file.name}")
         except Exception as e:
             st.error(f"Error parsing Word file: {e}")
 
@@ -122,24 +145,21 @@ if st.button("🚀 Initiate Complete Compliance Evaluation", type="primary"):
         st.error("Please upload a valid PDF or DOCX file to execute the compliance evaluation loop.")
     else:
         os.environ["GOOGLE_API_KEY"] = user_gemini_key
-        
         with st.status("🕵️ Executive Agent auditing compliance vectors...", expanded=True) as status_box:
             st.write("🔍 Extracting technical vectors and scanning tracking registers...")
             compliance_engine = build_compliance_agent()
-            
             initial_state = {
                 "niche_type": niche_selection,
                 "uploaded_text_pool": parsed_manuscript_text,
                 "retrieved_context": [],
                 "final_audit_report": ""
             }
-            
             final_output = compliance_engine.invoke(initial_state)
             status_box.update(label="✅ Analysis completion reached!", state="complete")
         
         audit_report = final_output.get("final_audit_report", "")
         if isinstance(audit_report, list) and len(audit_report) > 0:
-            actual_text = str(audit_report[0].get("text", audit_report[0])) if isinstance(audit_report[0], dict) else str(audit_report[0])
+            actual_text = str(audit_report.get("text", audit_report)) if isinstance(audit_report, dict) else str(audit_report)
         else:
             actual_text = str(audit_report)
                           
@@ -147,11 +167,10 @@ if st.button("🚀 Initiate Complete Compliance Evaluation", type="primary"):
         
         if is_premium:
             docx_bytes = convert_markdown_to_docx(actual_text)
-            
-            # DYNAMIC FILE NAMING ENGINE
             safe_niche = niche_selection.replace(' ', '_')
-            clean_name = re.sub(r'[^a-zA-Z0-9_]', '', uploaded_file.name.replace('.', '_').replace(' ', '_'))
-            dynamic_filename = f"{safe_niche}_{clean_name}_Audit_Report.docx"
+            raw_filename = uploaded_file.name
+            clean_filename_base = re.sub(r'[^a-zA-Z0-9_]', '_', raw_filename)
+            dynamic_filename = f"{safe_niche}_{clean_filename_base}_Audit_Report.docx"
             
             st.download_button(
                 label="📄 Download Official Audit Report as MS Word (.docx)",
