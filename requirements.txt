@@ -1,0 +1,8 @@
+streamlit
+langgraph
+langchain-google-genai
+requests
+arxiv
+pydantic
+python-docx
+pypdf
