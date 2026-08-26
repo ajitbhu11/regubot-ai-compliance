@@ -13,7 +13,6 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 def search_patent_corpora(query_snippet: str, limit: int = 5) -> List[Dict[str, Any]]:
     """Queries global open patent indexes and semantic registries for priority art."""
-    # FIXED: Re-added the complete operational API endpoint path string
     url = "https://openalex.org"
     params = {
         "search": f"patent disclosure {query_snippet}",
@@ -104,13 +103,31 @@ def corporate_auditor_node(state: ProductionComplianceState) -> Dict[str, Any]:
             "3. Structure your output strictly as an official 'Compliance Gap Analysis Report'."
         )
     else:
+        # CLEANED ENGLISH EXPORT PROTOCOL - PROMPT UPGRADE
         system_instruction = (
-            "You are an expert Regulatory consultant auditing clinical protocols for the Central Ethics Committee and Clinical Trials Registry - India (CTRI).\n"
-            "Audit the text against the statutory provisions of the New Drugs and Clinical Trials Rules, 2019.\n\n"
-            "STRICT DISCLOSURE REQUIREMENTS:\n"
-            "1. Verify patient safety criteria, informed consent protocols, and statistical sample justifications.\n"
-            "2. Flag gaps in safety reporting workflows or potential ethical conflicts.\n"
-            "3. Structure your output strictly as an official 'Ethics Committee Clearance Readiness Checklist'."
+            "You are an expert Clinical Regulatory Consultant and Bioethics Auditor syncing clinical protocols against the Indian Council of Medical Research (ICMR) National Ethical Guidelines and the New Drugs and Clinical Trials Rules, 2019 (NDCTR 2019).\n"
+            "STRICT FORMATTING RULE: Do not use messy bracket checkboxes (like [X]), raw ASCII boxes, or raw symbolic graphs. The report must look clean, spacious, corporate-ready, and write strictly in professional English.\n\n"
+            "STRUCTURE THE OUTPUT EXACTLY IN THIS CLEAN FORMAT:\n\n"
+            "# CLINICAL TRIAL BIOETHICS COMPLIANCE REPORT\n\n"
+            "## 1. EXECUTIVE AUDIT SUMMARY\n"
+            "* **Protocol Evaluated:** [Extract and insert brief title/scope]\n"
+            "* **Compliance Status:** [State clearly: APPROVED / MINOR REVISIONS REQUIRED / PROVISIONAL REJECTION]\n"
+            "* **Core Frameworks Used:** ICMR National Ethical Guidelines & New Drugs and Clinical Trials Rules (NDCTR 2019)\n\n"
+            "--- \n\n"
+            "## 2. CRITICAL REGULATORY GAPS & ETHICAL RISKS\n"
+            "Identify the exact legal and ethical gaps found in the document using clean bullet points. For each point, clearly explain why it is a risk:\n"
+            "* **Informed Consent Deficiency:** [Explain the specific missing consent or waiver parameters clearly]\n"
+            "* **Patient Safety & Data Governance:** [Highlight privacy, encryption, vulnerable populations, or safety risks without technical jargon clutter]\n"
+            "* **SAE and Compensation Workflow:** [Detail missing emergency tracking, serious adverse events reporting timelines, or legal compensation frameworks under Rule 39]\n\n"
+            "--- \n\n"
+            "## 3. MANDATORY CORRECTIVE ACTIONS FOR APPROVAL\n"
+            "Provide an ordered, clean numbered list of the exact steps the clinical team must take before submitting this protocol to the Ethics Committee:\n"
+            "1. [Action step 1]\n"
+            "2. [Action step 2]\n"
+            "3. [Action step 3]\n\n"
+            "--- \n\n"
+            "## 4. INSTITUTIONAL ETHICS COMMITTEE (IEC) RECOMMENDATION\n"
+            "[Provide a formal, 3-4 sentence professional English concluding statement summarizing the safety profile and whether the trial is safe to proceed to patient enrollment after revisions.]"
         )
         
     user_prompt = f"""
