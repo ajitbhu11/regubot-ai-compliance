@@ -6,3 +6,5 @@ arxiv
 pydantic
 python-docx
 pypdf
+beautifulsoup4
+pandas
