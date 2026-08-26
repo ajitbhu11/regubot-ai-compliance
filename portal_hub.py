@@ -1,6 +1,7 @@
 import os
 import io
 import re
+import pandas as pd  # Data visualization dependency for the analytics tracking system
 import streamlit as st
 from docx import Document
 from pypdf import PdfReader
@@ -10,13 +11,16 @@ from compliance_engine import build_compliance_agent
 # 1. COMMERCIAL APPLICATION LAYOUT CONFIGURATION
 # =====================================================================
 st.set_page_config(
-    page_title="ReguBot AI Compliance Suite",
+    page_title="ReguBot AI Compliance Suite (Beta Testing)",
     page_icon="🛡️",
-    layout="wide")
+    layout="wide"
+)
 
-PREMIUM_CHECKOUT_URL = "https://stripe.com"
-STRIPE_CUSTOMER_PORTAL = "https://stripe.com"
-INDIVIDUAL_PASS_URL = "https://stripe.com"
+# Initialize persistent session state matrices to track background data logs
+if "metrics_log" not in st.session_state:
+    st.session_state["metrics_log"] = []
+if "feedback_submitted" not in st.session_state:
+    st.session_state["feedback_submitted"] = False
 
 # =====================================================================
 # 2. CLERK USER REGISTRATION GATEWAY LOGIC
@@ -38,149 +42,205 @@ if not st.session_state["user_authenticated"]:
     st.stop()
 
 # =====================================================================
-# 3. PRIMARY BACKEND SAAS INTERFACE PORTAL WORKSPACE
+# 3. SIDEBAR WORKSPACE WITH INTEGRATED FEEDBACK TOOL
 # =====================================================================
-st.title("🛡️ ReguBot AI: Institutional Compliance & IPR Suite")
-st.caption("Enterprise-tier evaluation engine auditing academic manuscripts for Patents, Grants, and Ethics board approval.")
-
 with st.sidebar:
-    st.header("🏢 Enterprise Portal")
-    is_premium = st.checkbox("⭐ Unlock Corporate Tier Access", value=False)
+    st.header("🏢 Beta Test Environment")
+    st.success("👑 Testing Tier Unlocked: Report Download Feature is Active.")
     
-    if not is_premium:
-        st.warning("🔒 Running on the Free Preview Tier.")
-        st.markdown(f"### **Institutional Pro Tier**")
-        st.markdown(f"**Price:** ₹25,000/month (Billed Annually)")
-        st.markdown(f"[✨ Upgrade Campus License Now]({PREMIUM_CHECKOUT_URL})")
-        st.markdown("---")
-        st.markdown(f"### **Individual Scholar Pass**")
-        st.markdown(f"**Price:** ₹499/month (Cancel Anytime)")
-        st.markdown(f"[✨ Buy Single User Pass]({INDIVIDUAL_PASS_URL})")
-    else:
-        st.success("👑 Corporate features unlocked successfully!")
-        st.markdown(f"[⚙️ Manage Billing / Cancel Subscription]({STRIPE_CUSTOMER_PORTAL})")
-        
     st.markdown("---")
-    st.header("🔑 AI Brain Authorization")
-    st.info("To maintain zero server fees for you, this app utilizes the Bring-Your-Own-Key (BYOK) model.")
+    st.header("🔑 Bring-Your-Own-Key (BYOK)")
+    st.info("This application runs using your personal account tokens. No server fees are charged to the host.")
     
     user_gemini_key = st.text_input("Enter Your Google Gemini API Key:", type="password", placeholder="AIzaSy...")
     st.caption("🔗 [Get a free Gemini key from Google AI Studio](https://google.com)")
 
     st.markdown("---")
     st.subheader("⚡ Bounding Filters")
-    
-    if is_premium:
-        selected_years = st.slider("Select Publication Year Range:", min_value=2010, max_value=2026, value=(2022, 2026))
-        start_year, end_year = selected_years
+    selected_years = st.slider("Select Publication Year Range:", min_value=2010, max_value=2026, value=(2022, 2026))
+    start_year, end_year = selected_years
+
+    # 🌟 NEW INTEGRATION: ANONYMOUS BETA TESTER FEEDBACK WIDGET
+    st.markdown("---")
+    st.subheader("💬 Anonymous Tester Feedback")
+    if not st.session_state["feedback_submitted"]:
+        with st.form("feedback_form", clear_on_submit=True):
+            rating = st.selectbox("Rate Report Accuracy:", ["⭐⭐⭐⭐⭐ (Excellent)", "⭐⭐⭐⭐ (Good)", "⭐⭐⭐ (Average)", "⭐⭐ (Poor)", "⭐ (Broken)"])
+            comments = st.text_area("What features or rules should we add?", placeholder="e.g., Add Section 3(e) check for patents, modify ICMR timeline validation...")
+            submit_feedback = st.form_submit_button("Submit Feedback")
+            if submit_feedback:
+                st.session_state["feedback_submitted"] = True
+                st.toast("Thank you for your valuable response!", icon="🚀")
+                st.rerun()
     else:
-        st.caption("📅 Publication Range Locked: Defaulting to 2020-2026 (Upgrade to unlock slider)")
-        start_year, end_year = 2020, 2026
+        st.success("🎉 Thank you! Feedback logged successfully.")
+        if st.button("Submit another response"):
+            st.session_state["feedback_submitted"] = False
+            st.rerun()
 
     st.markdown("---")
     st.subheader("🗒️ Legal & Compliance")
-    
     with st.expander("⚖️ Terms of Service"):
-        st.caption("Usage Profile: This application functions purely under a Bring-Your-Own-Key (BYOK) paradigm. All computing operations are funded by the API tokens managed directly under your personal or institutional Google account keys.")
-        
+        st.caption("Usage Profile: This application functions purely under a Bring-Your-Own-Key (BYOK) paradigm.")
     with st.expander("🔒 Privacy Policy"):
-        st.caption("Data Custody: Uploaded manuscripts are processed purely in-memory during active loops. We maintain zero local database persistence.")
-# Choose the active operations niche layout framework
-niche_selection = st.selectbox(
-    "Select Target Compliance Evaluation Module:",
-    ["Patent Checker", "Grant Auditor", "Bioethics Scout"]
-)
+        st.caption("Data Custody: Uploaded manuscripts are processed purely in-memory during active loops.")
 
-if niche_selection == "Patent Checker":
-    st.info("🎯 Module active: Indian Patent (IPR) & Prior-Art Agent. Auditing criteria under the Indian Patents Act, 1970.")
-elif niche_selection == "Grant Auditor":
-    st.info("💰 Module active: SERB / DST Government Grant Alignment Auditor framework.")
-else:
-    st.info("🔬 Module active: Bioethics & Clinical Trial Regulatory Scout synced against regional CTRI profiles.")
+# Main app tabs configuration separating execution and analytics panels
+st.title("🛡️ ReguBot AI: Institutional Compliance & IPR Suite")
+st.caption("Beta Sandbox Mode: Auditing academic manuscripts for Patents, Grants, and Ethics board approval.")
 
-uploaded_file = st.file_uploader(
-    "📤 Drag and drop your research manuscript, grant proposal draft, or clinical methodology document:",
-    type=["pdf", "docx"],
-    help="Supports complete academic drafts in PDF or Microsoft Word formatting."
-)
+main_tab, dashboard_tab = st.tabs(["🚀 Execution Pipeline", "📊 Tracking Analytics Dashboard"])
+# =====================================================================
+# 4. EXECUTION PIPELINE TAB LAYOUT & PROCESSING LOOP
+# =====================================================================
+with main_tab:
+    niche_selection = st.selectbox(
+        "Select Target Compliance Evaluation Module:",
+        ["Patent Checker", "Grant Auditor", "Bioethics Scout"]
+    )
 
-parsed_manuscript_text = ""
-
-if uploaded_file is not None:
-    file_extension = uploaded_file.name.split(".")[-1].lower()
-    if file_extension == "pdf":
-        try:
-            pdf_reader = PdfReader(uploaded_file)
-            extracted_pages = [page.extract_text() for page in pdf_reader.pages]
-            parsed_manuscript_text = "\n".join(filter(None, extracted_pages))
-            st.success(f"📊 Successfully parsed PDF: {uploaded_file.name}")
-        except Exception as e:
-            st.error(f"Error parsing PDF file: {e}")
-    elif file_extension == "docx":
-        try:
-            doc = Document(uploaded_file)
-            extracted_paras = [p.text for p in doc.paragraphs]
-            parsed_manuscript_text = "\n".join(filter(None, extracted_paras))
-            st.success(f"📊 Successfully parsed Word Document: {uploaded_file.name}")
-        except Exception as e:
-            st.error(f"Error parsing Word file: {e}")
-
-def convert_markdown_to_docx(markdown_text):
-    doc = Document()
-    for line in markdown_text.split('\n'):
-        cleaned = line.strip()
-        if not cleaned: continue
-        if line.startswith('# '): doc.add_heading(line[2:], level=1)
-        elif line.startswith('## '): doc.add_heading(line[3:], level=2)
-        elif line.startswith('* ') or line.startswith('- '): doc.add_paragraph(line[2:], style='List Bullet')
-        else: doc.add_paragraph(line)
-    bio = io.BytesIO()
-    doc.save(bio)
-    return bio.getvalue()
-
-if st.button("🚀 Initiate Complete Compliance Evaluation", type="primary"):
-    if not user_gemini_key.strip():
-        st.error("🔑 Access Denied: Please provide your personal Gemini API key in the sidebar to power the app.")
-    elif not parsed_manuscript_text.strip():
-        st.error("Please upload a valid PDF or DOCX file to execute the compliance evaluation loop.")
+    if niche_selection == "Patent Checker":
+        st.info("🎯 Module active: Indian Patent (IPR) & Prior-Art Agent. Auditing criteria under the Indian Patents Act, 1970.")
+    elif niche_selection == "Grant Auditor":
+        st.info("💰 Module active: SERB / DST Government Grant Alignment Auditor framework.")
     else:
-        os.environ["GOOGLE_API_KEY"] = user_gemini_key
-        with st.status("🕵️ Executive Agent auditing compliance vectors...", expanded=True) as status_box:
-            st.write("🔍 Extracting technical vectors and scanning tracking registers...")
-            compliance_engine = build_compliance_agent()
-            initial_state = {
-                "niche_type": niche_selection,
-                "uploaded_text_pool": parsed_manuscript_text,
-                "retrieved_context": [],
-                "final_audit_report": ""
-            }
-            final_output = compliance_engine.invoke(initial_state)
-            status_box.update(label="✅ Analysis completion reached!", state="complete")
-        
-        audit_report = final_output.get("final_audit_report", "")
-        if isinstance(audit_report, list) and len(audit_report) > 0:
-            actual_text = str(audit_report.get("text", audit_report)) if isinstance(audit_report, dict) else str(audit_report)
+        st.info("🔬 Module active: Bioethics & Clinical Trial Regulatory Scout synced against regional CTRI and Live ICMR profiles.")
+
+    uploaded_file = st.file_uploader(
+        "📤 Drag and drop your research manuscript, grant proposal draft, or clinical methodology document:",
+        type=["pdf", "docx"],
+        help="Supports complete academic drafts in PDF or Microsoft Word formatting."
+    )
+
+    parsed_manuscript_text = ""
+
+    # Document Extraction Layer (PDF and DOCX)
+    if uploaded_file is not None:
+        file_extension = uploaded_file.name.split(".")[-1].lower()
+        if file_extension == "pdf":
+            try:
+                pdf_reader = PdfReader(uploaded_file)
+                extracted_pages = [page.extract_text() for page in pdf_reader.pages]
+                parsed_manuscript_text = "\n".join(filter(None, extracted_pages))
+                st.success(f"📊 Successfully parsed PDF: {uploaded_file.name}")
+            except Exception as e:
+                st.error(f"Error parsing PDF file: {e}")
+        elif file_extension == "docx":
+            try:
+                doc = Document(uploaded_file)
+                extracted_paras = [p.text for p in doc.paragraphs]
+                parsed_manuscript_text = "\n".join(filter(None, extracted_paras))
+                st.success(f"📊 Successfully parsed Word Document: {uploaded_file.name}")
+            except Exception as e:
+                st.error(f"Error parsing Word file: {e}")
+
+    # Helper function to convert AI Markdown responses seamlessly into an MS Word Document
+    def convert_markdown_to_docx(markdown_text):
+        doc = Document()
+        for line in markdown_text.split('\n'):
+            cleaned = line.strip()
+            if not cleaned: continue
+            if line.startswith('# '): doc.add_heading(line[2:], level=1)
+            elif line.startswith('## '): doc.add_heading(line[3:], level=2)
+            elif line.startswith('* ') or line.startswith('- '): doc.add_paragraph(line[2:], style='List Bullet')
+            else: doc.add_paragraph(line)
+        bio = io.BytesIO()
+        doc.save(bio)
+        return bio.getvalue()
+
+    # Core Execution Lifecycle Trigger Block
+    if st.button("🚀 Initiate Complete Compliance Evaluation", type="primary"):
+        if not user_gemini_key.strip():
+            st.error("🔑 Access Denied: Please provide your personal Gemini API key in the sidebar to power the evaluation loop.")
+        elif not parsed_manuscript_text.strip():
+            st.error("Please upload a valid PDF or DOCX file to execute the compliance evaluation loop.")
         else:
-            actual_text = str(audit_report)
-                          
-        st.success("✨ Regulatory document synthesis successful!")
-        
-        if is_premium:
-            docx_bytes = convert_markdown_to_docx(actual_text)
-            safe_niche = niche_selection.replace(' ', '_')
-            raw_filename = uploaded_file.name
-            clean_filename_base = re.sub(r'[^a-zA-Z0-9_]', '_', raw_filename)
-            dynamic_filename = f"{safe_niche}_{clean_filename_base}_Audit_Report.docx"
+            os.environ["GOOGLE_API_KEY"] = user_gemini_key
+            status_flag = "Success"
             
-            st.download_button(
-                label="📄 Download Official Audit Report as MS Word (.docx)",
-                data=docx_bytes,
-                file_name=dynamic_filename,
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                use_container_width=True
-            )
-        else:
-            st.info("🔒 Microsoft Word (.docx) Official Export feature is locked. Upgrade to Corporate Tier to save files.")
+            try:
+                with st.status("🕵️ Executive Agent auditing compliance vectors...", expanded=True) as status_box:
+                    st.write("🔍 Extracting technical vectors and scanning tracking registers...")
+                    compliance_engine = build_compliance_agent()
+                    initial_state = {
+                        "niche_type": niche_selection,
+                        "uploaded_text_pool": parsed_manuscript_text,
+                        "retrieved_context": [],
+                        "final_audit_report": ""
+                    }
+                    final_output = compliance_engine.invoke(initial_state)
+                    status_box.update(label="✅ Analysis completion reached!", state="complete")
+                
+                audit_report = final_output.get("final_audit_report", "")
+                actual_text = str(audit_report)
+                
+            except Exception as e:
+                status_flag = "Failed"
+                actual_text = f"An execution error occurred during processing loops: {e}"
+                st.error(actual_text)
+            
+            # 🌟 TELEMETRY REGISTRY UPDATES: Append document run statistics to session state memory cache
+            st.session_state["metrics_log"].append({
+                "Document Name": uploaded_file.name if uploaded_file else "Unknown_Draft",
+                "Evaluation Module": niche_selection,
+                "Status": status_flag,
+                "Length (Chars)": len(parsed_manuscript_text)
+            })
+            
+            if status_flag == "Success":
+                st.success("✨ Regulatory document synthesis successful!")
+                docx_bytes = convert_markdown_to_docx(actual_text)
+                safe_niche = niche_selection.replace(' ', '_')
+                raw_filename = uploaded_file.name if uploaded_file else "Manuscript"
+                clean_filename_base = re.sub(r'[^a-zA-Z0-9_]', '_', raw_filename)
+                dynamic_filename = f"{safe_niche}_{clean_filename_base}_Audit_Report.docx"
+                
+                # Unlocked Testing Download Layer Output
+                st.download_button(
+                    label="📄 Download Official Audit Report as MS Word (.docx)",
+                    data=docx_bytes,
+                    file_name=dynamic_filename,
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True
+                )
+                
+                st.markdown("---")
+                st.markdown(actual_text)
+
+# =====================================================================
+# 5. TRACKING ANALYTICS DASHBOARD ENGINE TAB
+# =====================================================================
+with dashboard_tab:
+    st.header("📊 Real-Time Operations Analytics")
+    st.caption("Live statistical execution summary tracking of document auditing workflows across the current testing cycle.")
+    
+    if len(st.session_state["metrics_log"]) > 0:
+        df_metrics = pd.DataFrame(st.session_state["metrics_log"])
         
+        # Upper level high-density metrics summary scorecard metrics cards row layout
+        kpi1, kpi2, kpi3 = st.columns(3)
+        with kpi1:
+            st.metric("Total Files Evaluated", len(df_metrics))
+        with kpi2:
+            success_count = len(df_metrics[df_metrics["Status"] == "Success"])
+            success_rate = (success_count / len(df_metrics)) * 100
+            st.metric("Processing Success Rate", f"{success_rate:.1f}%")
+        with kpi3:
+            most_used_module = str(df_metrics["Evaluation Module"].mode()[0])
+            st.metric("Peak Operational Niche", most_used_module)
+            
         st.markdown("---")
-        st.markdown(actual_text)
+        col_graph1, col_graph2 = st.columns(2)
+        
+        with col_graph1:
+            st.subheader("📁 Module Allocation Share")
+            module_counts = df_metrics["Evaluation Module"].value_counts()
+            st.bar_chart(module_counts, color="#2e7d32")
+            
+        with col_graph2:
+            st.subheader("📋 Document Audit Process Registry")
+            st.dataframe(df_metrics, use_container_width=True, hide_index=True)
+            
+    else:
+        st.info("📉 No telemetry tracking records found. Audit your first manuscript document inside the Execution Pipeline tab to generate data visualizations.")
+
