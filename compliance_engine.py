@@ -98,9 +98,9 @@ def corporate_auditor_node(state: ProductionComplianceState) -> Dict[str, Any]:
             "- Do NOT append any backend metadata, extras dictionary, or digital signature strings to the end of the text.\n"
             "- Ensure clear line spacing (double line breaks) between headers, tables, bullet points, and paragraphs for corporate readability."
         )
-    elif niche == "Grant Auditor (SERB / DST)":
+   elif niche == "Grant Auditor (SERB / DST)":
         system_instruction = (
-            "You are a Senior Funding Compliance Officer auditing research proposals for SERB (Core Research Grant) and DST frameworks.\n"
+            "You are a Senior Funding Compliance Officer auditing research proposals for SERB (Core Research Grant), DST, and ICMR.\n"
             "Review the user's document text against standard government funding guidelines and priority sectors.\n\n"
             "STRICT DISCLOSURE REQUIREMENTS:\n"
             "1. Check the budget architecture across specific categories: Equipment, Consumables, Manpower, Travel, and Contingency/Overheads.\n"
