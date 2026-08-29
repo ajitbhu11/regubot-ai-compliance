@@ -78,12 +78,12 @@ def compliance_scout_node(state: ProductionComplianceState) -> Dict[str, Any]:
         scouted_results = future_data.result()
         
     return {"retrieved_context": scouted_results}
-
 def corporate_auditor_node(state: ProductionComplianceState) -> Dict[str, Any]:
     """Executes deep evaluation using strict statutory prompts."""
     llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash")
     niche = state["niche_type"]
     
+    # 🌟 CRITICAL FIX: Direct string matching with Streamlit selectbox values
     if niche == "Patent Checker":
         system_instruction = (
             "You are a Senior IPR Attorney and Indian Patent Agent operating under the Indian Patents Act, 1970.\n"
@@ -91,19 +91,62 @@ def corporate_auditor_node(state: ProductionComplianceState) -> Dict[str, Any]:
             "STRICT DISCLOSURE REQUIREMENTS:\n"
             "1. Evaluate statutory bars explicitly under Section 3(d) (mere discovery of a new form of a known substance).\n"
             "2. Evaluate statutory bars explicitly under Section 3(k) (mathematical methods, software per se, or algorithms).\n"
-            "3. Structure your final output strictly as an official 'Prior-Art Verification Report' with individual scores for: Novelty, Inventive Steps, and Industrial Applicability."
+            "3. Structure your final output strictly as an official 'Prior-Art Verification Report' with individual scores for: Novelty, Inventive Steps, and Industrial Applicability.\n\n"
+            "CRITICAL OUTPUT RULES:\n"
+            "- Output your response ONLY as clean, standard Markdown text.\n"
+            "- Do NOT wrap your response in a Python list, dictionary, or JSON format (do not use '[{type: text}]').\n"
+            "- Do NOT append any backend metadata, extras dictionary, or digital signature strings to the end of the text.\n"
+            "- Ensure clear line spacing (double line breaks) between headers, tables, bullet points, and paragraphs for corporate readability."
         )
-    elif niche == "Grant Auditor":
+    elif niche == "Grant Auditor (SERB / DST)":
         system_instruction = (
-            "You are a Senior Funding Compliance Officer auditing research proposals for SERB (Core Research Grant), DST, and ICMR.\n"
+            "You are a Senior Funding Compliance Officer auditing research proposals for SERB (Core Research Grant) and DST frameworks.\n"
             "Review the user's document text against standard government funding guidelines and priority sectors.\n\n"
             "STRICT DISCLOSURE REQUIREMENTS:\n"
             "1. Check the budget architecture across specific categories: Equipment, Consumables, Manpower, Travel, and Contingency/Overheads.\n"
             "2. Flag missing eligibility parameters, unrealistic timelines, or alignment deviations.\n"
             "3. Structure your output strictly as an official 'Compliance Gap Analysis Report'."
         )
+    elif niche == "ANRF - NPDF Auditor":
+        system_instruction = (
+            "You are an expert Compliance Auditor for the Anusandhan National Research Foundation (ANRF) specializing in National Post Doctoral Fellowship (NPDF) mandates.\n"
+            "Evaluate the proposal strictly against ANRF-NPDF criteria.\n\n"
+            "STRICT DISCLOSURE REQUIREMENTS:\n"
+            "1. Check Candidate Eligibility: Verify that the candidate has completed their Ph.D. or submitted the thesis, and complies with the upper age limit of 35 years (relaxations: 5 years for SC/ST/OBC/Physically Handicapped/Women).\n"
+            "2. Mentor Institutional Alignment: Ensure the chosen Host Mentor holds a regular academic/research position in a recognized Indian institution with active research infrastructure.\n"
+            "3. Operational Guidelines: Validate the project duration (strictly capped at 24 months) and verify budget headings across Fellowship slabs, Research Grant (Rs. 2,00,000 per annum for consumables/travel), and Overhead allowances.\n\n"
+            "Structure your output exactly using this format:\n\n"
+            "# ANRF-NPDF COMPLIANCE SCREENING REPORT\n\n"
+            "## 1. ELIGIBILITY & AGE VERIFICATION METRICS\n"
+            "[Assess candidate age, Ph.D. timeline constraints, and relaxation flags]\n\n"
+            "## 2. HOST MENTOR & INSTITUTIONAL ALIGNMENT\n"
+            "[Assess mentor regularity, institutional infrastructure availability, and equipment overlap hazards]\n\n"
+            "## 3. PROJECT TIMELINE AND BUDGET SLAB VALIDATION\n"
+            "[Verify strict 24-month horizon limits, overhead distribution, and the annual Rs. 2,00,000 Research Grant matrix alignment]\n\n"
+            "## 4. FINAL SCREENING STATUS SUMMARY\n"
+            "[Provide a conclusive 3-4 sentence professional executive decision outlining explicit compliance or mandatory missing updates.]"
+        )
+    elif niche == "CSIR Grant Auditor":
+        system_instruction = (
+            "You are a Project Appraisal Officer for the Council of Scientific and Industrial Research (CSIR) Extramural Research Division.\n"
+            "Review the research manuscript or scheme proposal against CSIR funding priorities.\n\n"
+            "STRICT DISCLOSURE REQUIREMENTS:\n"
+            "1. Technical Relevance: Assess alignment with CSIR national laboratories, socio-economic challenges, or industrial technology themes.\n"
+            "2. Project Staff Scale: Check proposal requests for Junior Research Fellows (JRF), Senior Research Fellows (SRF), or Research Associates (RA) against prevailing CSIR OM financial guidelines.\n"
+            "3. Infrastructure Verification: Ensure non-duplication of industrial-scale capital equipment that should otherwise be accessed via nearby national laboratories or local facilities.\n\n"
+            "Structure your output strictly as an official 'CSIR Project Feasibility & Compliance Audit'."
+        )
+    elif niche == "Central Agencies Multi-Scout (ICAR/DBT/MNRE)":
+        system_instruction = (
+            "You are an Institutional Regulatory Auditor syncing multi-agency requirements across Indian Central Departments (ICAR for agriculture, DBT for biotechnology, MNRE for renewable energy).\n"
+            "Assess the uploaded methodology for critical structural parameters.\n\n"
+            "STRICT DISCLOSURE REQUIREMENTS:\n"
+            "1. ICAR/DBT Parameters: Look for Institutional Biosafety Committee (IBSC) approvals, GMO declarations, or agricultural land/infrastructure access verification.\n"
+            "2. MNRE/MeitY Parameters: Look for testing certifications, safety standard compliance (BIS/IEC standard compliance profiles), or validation blueprints.\n"
+            "3. General Allocation Rules: Verify inter-disciplinary structural layout integrity across multi-institutional setups.\n\n"
+            "Structure your output strictly as a 'Multi-Agency Central Project Compliance Review'."
+        )
     else:
-        # CLEANED ENGLISH EXPORT PROTOCOL - PROMPT UPGRADE
         system_instruction = (
             "You are an expert Clinical Regulatory Consultant and Bioethics Auditor syncing clinical protocols against the Indian Council of Medical Research (ICMR) National Ethical Guidelines and the New Drugs and Clinical Trials Rules, 2019 (NDCTR 2019).\n"
             "STRICT FORMATTING RULE: Do not use messy bracket checkboxes (like [X]), raw ASCII boxes, or raw symbolic graphs. The report must look clean, spacious, corporate-ready, and write strictly in professional English.\n\n"
@@ -147,6 +190,7 @@ def corporate_auditor_node(state: ProductionComplianceState) -> Dict[str, Any]:
     response = llm.invoke(messages)
     return {"final_audit_report": response.content}
 
+
 def build_compliance_agent():
     """Assembles the compiled orchestration lifecycle workflow."""
     workflow = StateGraph(ProductionComplianceState)
@@ -157,3 +201,4 @@ def build_compliance_agent():
     workflow.add_edge("scout_data", "audit_document")
     workflow.add_edge("audit_document", END)
     return workflow.compile()
+
